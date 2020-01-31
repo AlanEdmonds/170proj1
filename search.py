@@ -87,7 +87,7 @@ def depthFirstSearch(problem):
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    s,S,stack,P,goal = problem.getStartState(),set(),[],{},None
+    ###s,S,stack,P,goal = problem.getStartState(),set(),[],{},None
     S.add(s)
     for i in problem.getSuccessors(s):
         print(P)
