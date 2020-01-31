@@ -87,35 +87,49 @@ def depthFirstSearch(problem):
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    ###s,S,stack,P,goal = problem.getStartState(),set(),[],{},None
-    S.add(s)
-    for i in problem.getSuccessors(s):
-        print(P)
-        print(i)
-        P[i] = (s,None,None)    #P is a dictionary. it's mapping state i to (s none none) which is the parent state
-        print(P[i])
-        print("~~~~~~~~~~~~~~~~~~~")
-        stack.append(i) #after completion of for loop, stack is list of start state's successors
-    print(s)
-    print(stack)
-    print(S)
-    while stack:    #while stack is not empty
-        u = stack.pop() #removes last state
-        if u[0] in S: continue
-        if problem.isGoalState(u[0]):
-            goal = u
-            break
-        S.add(u[0])
-        for i in problem.getSuccessors(u[0]):
-            P[i] = u
-            stack.append(i)
-    path,current_node = [],goal
-    while current_node != (s,None,None):
-        path.append(current_node[1])
-        current_node = P[current_node]
-    path.reverse()
-    return path
-    #util.raiseNotDefined()
+    ####   variables
+    startState = problem.getStartState()
+    goal = None
+    stackList = [] #basically keeps track of our depth first search
+    parentDict = {} #our dictionary adds successor states as keys, each mapping to their parent states
+    actions = [] #RETURN THIS
+    currentState = None #this will be set to goal, and then updated by a loop until it becomes start. so when
+                        #   currentState = (startState, None, None) then we have successfully reached start from goal and
+                        #   we are almost done
+
+    explored = set() #the 'explored' set variable prevents infinite loop by preventing us from appending (to stackList) successor
+                     #   states of a state whose successor states are already in stackList. in other words, prevents us from
+                     #   re-exploring previously explored branches
+    explored.add(startState)
+
+    #this loop is executed once. our dictionary adds each successor of startState as a key mapping to startState
+    for successor in problem.getSuccessors(startState):
+        parentDict[successor] = (startState, None, None)
+        stackList.append(successor)
+
+    #this while loop and its contained for loop allow us to move through with our depth first search
+    while stackList:
+        popped = stackList.pop()
+        if popped[0] in explored:
+            continue #exits the current iteration
+        if problem.isGoalState(popped[0]):
+            goal = popped
+            break #exits entire while loop
+        explored.add(popped[0])
+        for successor in problem.getSuccessors(popped[0]): #similar to the above for loop
+            parentDict[successor] = popped
+            stackList.append(successor)
+    currentState = goal
+
+    #from all the above code we've been able to assemble a dictionary mapping successor states as keys to their parent states.
+    #   now our currentState variable will use a while loop to move through this dictionary from goal to start and append the
+    #   direction values to our 'actions' list. the reverse of this list is our answer
+    while currentState != (startState, None, None):
+        actions.append(currentState[1])
+        currentState = parentDict[currentState]
+    actions.reverse()
+    return actions
+
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
