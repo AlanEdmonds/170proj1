@@ -4,7 +4,7 @@
 # educational purposes provided that (1) you do not distribute or publish
 # solutions, (2) you retain this notice, and (3) you provide clear
 # attribution to UC Berkeley, including a link to http://ai.berkeley.edu.
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
 # The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
@@ -288,6 +288,7 @@ class CornersProblem(search.SearchProblem):
         # Please add any code here which you would like to use
         # in initializing the problem
         "*** YOUR CODE HERE ***"
+        self.start = (self.startingPosition, self.corners)
 
     def getStartState(self):
         """
@@ -295,14 +296,14 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.start
 
     def isGoalState(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return not state[1]
 
     def getSuccessors(self, state):
         """
@@ -314,7 +315,6 @@ class CornersProblem(search.SearchProblem):
             state, 'action' is the action required to get there, and 'stepCost'
             is the incremental cost of expanding to that successor
         """
-
         successors = []
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
             # Add a successor state to the successor list if the action is legal
@@ -323,9 +323,18 @@ class CornersProblem(search.SearchProblem):
             #   dx, dy = Actions.directionToVector(action)
             #   nextx, nexty = int(x + dx), int(y + dy)
             #   hitsWall = self.walls[nextx][nexty]
-
             "*** YOUR CODE HERE ***"
-
+            x, y = state[0]
+            dx, dy = Actions.directionToVector(action)
+            nextX, nextY = int(x + dx), int(y + dy)
+            corners = state[1] #because state is a tuple, which don't support item assignment, which we need if we end up needing to 'remove' a corner
+            if not self.walls[nextX][nextY]:
+                if (nextX, nextY) in state[1]:
+                    for i in range(len(corners)):
+                        if (nextX, nextY) == corners[i]:
+                            corners = corners[:i] + corners[i+1:]
+                            break #position can't be two corners at once
+                successors.append((((nextX, nextY), corners), action, 1 ))
         self._expanded += 1 # DO NOT CHANGE
         return successors
 
@@ -341,7 +350,6 @@ class CornersProblem(search.SearchProblem):
             x, y = int(x + dx), int(y + dy)
             if self.walls[x][y]: return 999999
         return len(actions)
-
 
 def cornersHeuristic(state, problem):
     """
@@ -360,7 +368,19 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+    #idea: distance through closest corner, then after that the next closest corner and so on for all remaining corners. use bfs for distance
+    corners = list(state[1])
+    position = state[0]
+    totalDist = 0
+    while len(corners) > 0:
+        distances = []
+        for i in range(len(corners)):
+            distances.append(abs(position[0] - corners[i][0]) + abs(position[1] - corners[i][1]))
+        closest = corners[distances.index(min(distances))]
+        corners.remove(closest)
+        position = closest
+        totalDist += min(distances)
+    return totalDist
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -454,7 +474,74 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    return 0
+    #attempt 1
+    """
+    food = foodGrid.asList()
+    totalDist = 0
+    while len(food) > 0:
+        distances = []
+        for i in range(len(food)):
+            #distances.append(abs(position[0] - food[i][0]) + abs(position[1] - food[i][1]))
+            distances.append(mazeDistance(position, food[i], problem.startingGameState))
+        closest = food[distances.index(min(distances))]
+        food.remove(closest)
+        position = closest
+        totalDist += min(distances)
+    return totalDist
+    """
+    #idea 2: use xDiff and yDiff to determine which quadrant farthest is in (relative to position)
+    #we can then increment fCount for all dots in the other three quadrants and add this to distance
+    #the next question is whether to use manhattanDistance or mazeDistance.
+    #it seems manhattanDistance would be more fitting. maybe shouldnt even be using mazeDistance for finding farthest
+    food = foodGrid.asList()
+    distances = []
+    maxDist = -69
+    farthest = position
+    for f in food:
+        dist = abs(position[0] - f[0]) + abs(position[1] - f[1])
+        distances.append(dist)
+        if dist > maxDist:
+            maxDist = dist
+            farthest = f
+    xDiff = position[0] - farthest[0]
+    yDiff = position[1] - farthest[1]
+    fCount = 0
+    for f in food:
+        if xDiff > 0: #farthest is to the left of position
+            if yDiff > 0: #farthest is under position
+                if f[0] > position[0] or f[1] > position[1]: #f is to the right of or above position. should we be using >= or >   ?
+                    fCount += 1
+            if yDiff < 0: #farthest is above position
+                if f[0] > position[0] or f[1] < position[1]:
+                    fCount += 1
+            if yDiff == 0: #farthest and position are on the same horizontal
+                if f[0] > position[0] or f[1] != position[1]:
+                    fCount += 1
+
+        if xDiff < 0: #farthest is to the right of position
+            if yDiff > 0: #farthest is under position
+                if f[0] < position[0] or f[1] > position[1]: #f is to the right of or above position. should we be using >= or >   ?
+                    fCount += 1
+            if yDiff < 0: #farthest is above position
+                if f[0] < position[0] or f[1] < position[1]:
+                    fCount += 1
+            if yDiff == 0: #farthest and position are on the same horizontal
+                if f[0] < position[0] or f[1] != position[1]:
+                    fCount += 1
+
+        if xDiff == 0: #farthest and position are on the same vertical
+            if yDiff > 0: #farthest is under position
+                if f[0] != position[0] or f[1] > position[1]: #f is to the right of or above position. should we be using >= or >   ?
+                    fCount += 1
+            if yDiff < 0: #farthest is above position
+                if f[0] != position[0] or f[1] < position[1]:
+                    fCount += 1
+            if yDiff == 0: #farthest and position are on the same horizontal
+                if f[0] != position[0] or f[1] != position[1]:
+                    fCount += 1
+    return mazeDistance(position, farthest, problem.startingGameState) + fCount
+
+
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -485,7 +572,11 @@ class ClosestDotSearchAgent(SearchAgent):
         problem = AnyFoodSearchProblem(gameState)
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        distances = []
+        for f in food.asList():
+            distances.append(mazeDistance(startPosition, f, gameState))
+        closest = food.asList()[distances.index(min(distances))]
+        return search.bfs(problem)
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -521,7 +612,18 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         x,y = state
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        """
+        distances = []
+        for f in self.food.asList():
+            distances.append(mazeDistance(state, f, gameState))
+        closest = self.food.asList()[distances.index(min(distances))]
+        return closest == state
+        """
+        isGoal = False
+        for f in self.food.asList():
+            if f == state:
+                isGoal = True
+        return isGoal
 
 def mazeDistance(point1, point2, gameState):
     """

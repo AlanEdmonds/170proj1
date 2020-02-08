@@ -87,9 +87,6 @@ def depthFirstSearch(problem):
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    #print("Start:", problem.getStartState())
-    #print("Start's successors:", problem.getSuccessors(problem.getStartState()))
-
     from util import Stack
     ####   variables
     startState = problem.getStartState()
@@ -98,8 +95,8 @@ def depthFirstSearch(problem):
     parentDict = {} #our dictionary adds successor states as keys, each mapping to their parent states
     actions = [] #RETURN THIS
     currentState = None #this will be set to goal, and then updated by a loop until it becomes start. so when
-                        #   currentState = (startState, None, None) then we have successfully reached start from goal and
-                        #   we are almost done
+                        #   currentState = (startState, None, None) then we have successfully reached start from
+                        #   goal and we are almost done
 
     explored = set() #the 'explored' set variable prevents infinite loop by preventing us from appending (to stack) successor
                      #   states of a state whose successor states are already in stack. in other words, prevents us from
@@ -127,9 +124,9 @@ def depthFirstSearch(problem):
     #print("goal: ")
     #print(goal)
 
-    #from all the above code we've been able to assemble a dictionary mapping successor states as keys to their parent states.
-    #   now our currentState variable will use a while loop to move through this dictionary from goal to start and append the
-    #   direction values to our 'actions' list. the reverse of this list is our answer
+    #from all the above code we've been able to assemble a dictionary mapping successor states as keys to their
+    #   parent states. now our currentState variable will use a while loop to move through this dictionary from
+    #   goal to start and append the direction values to our 'actions' list. the reverse of this list is our answer
     while currentState != (startState, None, None):
         actions.append(currentState[1])
         currentState = parentDict[currentState]
@@ -140,6 +137,8 @@ def depthFirstSearch(problem):
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
+    #the first attempt didn't work for problem 5
+    """
     from util import Queue
     ####   variables
     startState = problem.getStartState()
@@ -170,73 +169,61 @@ def breadthFirstSearch(problem):
             q.push(successor)
     currentState = goal
 
-    #from all the above code we've been able to assemble a dictionary mapping successor states as keys to their parent states.
-    #   now our currentState variable will use a while loop to move through this dictionary from goal to start and append the
-    #   direction values to our 'actions' list. the reverse of this list is our answer
+    #from all the above code we've been able to assemble a dictionary mapping successor states as keys to their
+    #   parent states. now our currentState variable will use a while loop to move through this dictionary from
+    #   goal to start and append the direction values to our 'actions' list. the reverse of this list is our answer
     while currentState != (startState, None, None):
         actions.append(currentState[1])
         currentState = parentDict[currentState]
     actions.reverse()
     return actions
+    """
+    #cleaned up version that works with problem 5
+    from util import Queue
+    q = Queue()
+    explored = set()
+    q.push((problem.getStartState(), [], 0))
+    while not q.isEmpty():
+        popped = q.pop()
+        if popped[0] in explored:
+            continue
+        explored.add(popped[0])
+        if problem.isGoalState(popped[0]):
+            return popped[1]
+        for successor in problem.getSuccessors(popped[0]):
+            if successor[0] not in explored:
+                #push successor, where actions and cost are cumulative on its parent (popped)
+                q.push((successor[0], popped[1] + [successor[1]], popped[2] + successor[2]))
+    return popped[1]
+
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-
-    print("Start:", problem.getStartState())
-    print("Start's successors:", problem.getSuccessors(problem.getStartState()))
-    for successor in problem.getSuccessors(problem.getStartState()):
-        print(successor)
-        for s in problem.getSuccessors(successor[0]):
-            print(s)
     from util import PriorityQueue
     ####   variables
-    startState = problem.getStartState()
-    goal = None
     pq = PriorityQueue() #basically keeps track of our uniform cost search
-    priority = 0
-    parentDict = {} #our dictionary adds successor states as keys, each mapping to their parent states
-    actions = [] #RETURN THIS
-    currentState = None #this will be set to goal, and then updated by a loop until it becomes start. so when
-                        #   currentState = (startState, None, None) then we have successfully reached start from goal and
-                        #   we are almost done
+    startState = problem.getStartState()
+    explored = [] #this list will stop us from revisiting states unnecessarily. But it will let us revisit
+                  ##a state if we have found a way to get there in lower cost
 
-    explored = set() #the 'explored' set variable prevents infinite loop by preventing us from appending (to stack) successor
-                     #   states of a state whose successor states are already in stack. in other words, prevents us from
-                     #   re-exploring previously explored branches
-    explored.add(startState)
-
-    #this loop is executed once. our dictionary adds each successor of startState as a key mapping to startState
-    for successor in problem.getSuccessors(startState):
-        parentDict[successor] = (startState, None, None)
-        pq.push(successor, priority)
-    priority += 1
-
-    #this while loop and its contained for loop allow us to move through with our depth first search
-    while not pq.isEmpty():
-        popped = pq.pop()
-        if popped[0] in explored:
-            continue #exits the current iteration
-        if problem.isGoalState(popped[0]):
-            goal = popped
-            break #exits entire while loop
-        explored.add(popped[0])
-        for successor in problem.getSuccessors(popped[0]): #similar to the above for loop
-            parentDict[successor] = popped
-            pq.push(successor, priority)
-        priority += 1
-    currentState = goal
-    #print("goal: ")
-    #print(goal)
-
-    #from all the above code we've been able to assemble a dictionary mapping successor states as keys to their parent states.
-    #   now our currentState variable will use a while loop to move through this dictionary from goal to start and append the
-    #   direction values to our 'actions' list. the reverse of this list is our answer
-    while currentState != (startState, None, None):
-        actions.append(currentState[1])
-        currentState = parentDict[currentState]
-    actions.reverse()
-    return actions
+    pq.push([startState, [], 0], 0)
+    current = pq.pop()
+    while not problem.isGoalState(current[0]):
+        exploreThis = True
+        totalCost = problem.getCostOfActions(current[1])
+        for e in explored:
+            if current[0] == e[0] and totalCost >= e[1]:
+                #if current's state has already been explored and the cost is not being lowered:
+                exploreThis = False
+        if exploreThis:
+            explored.append([current[0], totalCost])
+            for successor in problem.getSuccessors(current[0]):
+                (state, action, cost) = successor
+                pq.push([state, current[1] + [action], problem.getCostOfActions(current[1] + [action])],
+                    problem.getCostOfActions(current[1] + [action]))
+        current = pq.pop()
+    return current[1]
 
 
 def nullHeuristic(state, problem=None):
@@ -249,7 +236,31 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    from util import PriorityQueue
+    ####   variables
+    pq = PriorityQueue() #basically keeps track of our uniform cost search
+    startState = problem.getStartState()
+    explored = [] #this list will stop us from revisiting states unnecessarily. But it will let us revisit
+                  ##a state if we have found a way to get there in lower cost
+
+    pq.push([startState, [], 0], 0)
+    current = pq.pop()
+    while not problem.isGoalState(current[0]):
+        exploreThis = True
+        totalCost = problem.getCostOfActions(current[1]) + heuristic(current[0], problem)
+        for e in explored:
+            if current[0] == e[0] and totalCost >= e[1]:
+                #if current's state has already been explored and the cost is not being lowered:
+                exploreThis = False
+        if exploreThis:
+            explored.append([current[0], totalCost])
+            for successor in problem.getSuccessors(current[0]):
+                (state, action, cost) = successor
+                ucsDistance = problem.getCostOfActions(current[1] + [action])
+                heur = heuristic(state, problem)
+                pq.push([state, current[1] + [action], ucsDistance + heur], ucsDistance + heur)
+        current = pq.pop()
+    return current[1]
 
 
 # Abbreviations
