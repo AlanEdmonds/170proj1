@@ -540,7 +540,10 @@ def foodHeuristic(state, problem):
                 if f[0] != position[0] or f[1] != position[1]:
                     fCount += 1
     return mazeDistance(position, farthest, problem.startingGameState) + fCount
-
+    #breakdown: lets take the exmample case of xDiff>0 and yDiff>0, meaning that 'farthest' is in the bottom left
+    #quadrant relative to 'position'. Our heuristic takes into account the mazeDistance to farthest, and fCount
+    #(our problem is to collect all foods as efficiently as possible. fCount is the number of foods in the three quadrants
+    #not containing farthest, which intuitively should be a better gauge than the number of foods in all four quadrants)
 
 
 class ClosestDotSearchAgent(SearchAgent):
